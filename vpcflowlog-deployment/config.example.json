@@ -1,0 +1,29 @@
+{
+  "vpcId": "vpc-12345678",
+  "bucketName": "my-vpc-flow-logs-bucket",
+  "environment": "prod",
+  "aws": {
+    "account": "123456789012",
+    "region": "us-east-1"
+  },
+  "flowLogs": {
+    "trafficType": "ALL",
+    "logFormat": "custom",
+    "deliveryRoleArn": "auto-create"
+  },
+  "s3": {
+    "lifecycleRules": {
+      "transitionToIA": 30,
+      "transitionToGlacier": 90,
+      "transitionToDeepArchive": 365,
+      "deleteOldVersions": 30
+    },
+    "encryption": "S3_MANAGED",
+    "versioning": true
+  },
+  "cloudWatch": {
+    "logGroupName": "/aws/vpc/flowlogs",
+    "retentionDays": 30,
+    "trafficType": "REJECT"
+  }
+}

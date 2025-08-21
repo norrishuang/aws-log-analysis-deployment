@@ -21,9 +21,35 @@
     "encryption": "S3_MANAGED",
     "versioning": true
   },
+  "sqs": {
+    "enableNotification": true,
+    "queueName": "vpc-flow-logs-notifications",
+    "visibilityTimeoutSeconds": 300,
+    "messageRetentionPeriod": 1209600,
+    "deadLetterQueue": {
+      "enabled": true,
+      "maxReceiveCount": 3,
+      "retentionPeriod": 1209600
+    },
+    "eventFilters": {
+      "prefix": "vpc-flow-logs/",
+      "suffix": ".gz"
+    }
+  },
   "cloudWatch": {
     "logGroupName": "/aws/vpc/flowlogs",
     "retentionDays": 30,
     "trafficType": "REJECT"
+  },
+  "processing": {
+    "glue": {
+      "database": "vpc_flow_logs",
+      "table": "flow_logs",
+      "autoCreatePartitions": true
+    },
+    "athena": {
+      "workgroup": "primary",
+      "outputLocation": "s3://my-athena-results-bucket/vpc-flow-logs/"
+    }
   }
 }

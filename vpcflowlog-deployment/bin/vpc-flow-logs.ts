@@ -9,6 +9,8 @@ const app = new cdk.App();
 const vpcId = app.node.tryGetContext('vpcId') || process.env.VPC_ID;
 const bucketName = app.node.tryGetContext('bucketName') || process.env.BUCKET_NAME;
 const environment = app.node.tryGetContext('environment') || process.env.ENVIRONMENT || 'dev';
+const enableSqsNotification = app.node.tryGetContext('enableSqsNotification') !== 'false';
+const sqsQueueName = app.node.tryGetContext('sqsQueueName') || process.env.SQS_QUEUE_NAME;
 
 if (!vpcId) {
   throw new Error('VPC ID is required. Please provide it via context (-c vpcId=vpc-xxx) or environment variable VPC_ID');
@@ -18,6 +20,8 @@ new VpcFlowLogsStack(app, `VpcFlowLogsStack-${environment}`, {
   vpcId: vpcId,
   bucketName: bucketName,
   environment: environment,
+  enableSqsNotification: enableSqsNotification,
+  sqsQueueName: sqsQueueName,
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION,

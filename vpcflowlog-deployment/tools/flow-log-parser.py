@@ -34,19 +34,33 @@ logger = logging.getLogger(__name__)
 class FlowLogParser:
     """VPC Flow Logs 解析器"""
     
-    # 字段定义 (按我们的 CDK 配置顺序)
+    # 字段定义 (按我们的 CDK 配置顺序) - 完整的 30 个字段
     FIELD_NAMES = [
+        # 基础字段 (1-14)
         'version', 'account_id', 'interface_id', 'srcaddr', 'dstaddr',
         'srcport', 'dstport', 'protocol', 'packets', 'bytes',
-        'windowstart', 'windowend', 'action', 'flowlogstatus',
-        'vpc_id', 'subnet_id', 'instance_id', 'tcp_flags',
-        'type', 'pkt_srcaddr', 'pkt_dstaddr'
+        'start', 'end', 'action', 'log_status',
+        
+        # VPC 和实例字段 (15-17)
+        'vpc_id', 'subnet_id', 'instance_id',
+        
+        # 网络详细信息字段 (18-21)
+        'tcp_flags', 'type', 'pkt_srcaddr', 'pkt_dstaddr',
+        
+        # 区域和位置字段 (22-25)
+        'region', 'az_id', 'sublocation_type', 'sublocation_id',
+        
+        # AWS 服务字段 (26-27)
+        'pkt_src_aws_service', 'pkt_dst_aws_service',
+        
+        # 流量路径字段 (28-29)
+        'flow_direction', 'traffic_path'
     ]
     
     # 数值字段
     NUMERIC_FIELDS = {
         'version', 'srcport', 'dstport', 'protocol', 
-        'packets', 'bytes', 'windowstart', 'windowend', 'tcp_flags'
+        'packets', 'bytes', 'start', 'end', 'tcp_flags', 'traffic_path'
     }
     
     # 协议映射
@@ -120,9 +134,9 @@ class FlowLogParser:
                 
         # 添加计算字段
         record['protocol_name'] = self.PROTOCOL_MAP.get(record.get('protocol'), 'Unknown')
-        record['start_time'] = datetime.fromtimestamp(record['windowstart']) if record['windowstart'] else None
-        record['end_time'] = datetime.fromtimestamp(record['windowend']) if record['windowend'] else None
-        record['duration'] = record['windowend'] - record['windowstart'] if record['windowend'] and record['windowstart'] else None
+        record['start_time'] = datetime.fromtimestamp(record['start']) if record['start'] else None
+        record['end_time'] = datetime.fromtimestamp(record['end']) if record['end'] else None
+        record['duration'] = record['end'] - record['start'] if record['end'] and record['start'] else None
         
         return record
         

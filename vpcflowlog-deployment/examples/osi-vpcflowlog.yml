@@ -1,0 +1,93 @@
+version: '2'
+extension:
+  osis_configuration_metadata:
+    builder_type: visual
+vpclogs-to-opensearch:
+  source:
+    s3:
+      acknowledgments: true
+      sqs:
+        queue_url: 'https://sqs.us-east-1.amazonaws.com/812046859005/vpc-flow-logs-dev-notifications'
+        maximum_messages: '10'
+        visibility_timeout: 90s
+        visibility_duplication_protection: true
+      aws:
+        region: us-east-1
+      notification_type: sqs
+      notification_source: s3
+      codec:
+        csv:
+          delimiter: ' '
+          quote_character: '"'
+          detect_header: true
+      compression: gzip
+      workers: '1'
+  processor:
+    # Parse VPC Flow Log fields using grok pattern (OpenSearch standard field names)
+    - grok:
+        match:
+          message: 
+            - "%{NOTSPACE:aws.vpc.version} %{NOTSPACE:aws.vpc.account-id} %{NOTSPACE:aws.vpc.interface-id} %{NOTSPACE:aws.vpc.srcaddr} %{NOTSPACE:aws.vpc.dstaddr} %{NOTSPACE:aws.vpc.srcport} %{NOTSPACE:aws.vpc.dstport} %{NOTSPACE:aws.vpc.protocol} %{NOTSPACE:aws.vpc.packets} %{NOTSPACE:aws.vpc.bytes} %{NOTSPACE:aws.vpc.start} %{NOTSPACE:aws.vpc.end} %{NOTSPACE:aws.vpc.action} %{NOTSPACE:aws.vpc.log-status} %{NOTSPACE:aws.vpc.vpc-id} %{NOTSPACE:aws.vpc.subnet-id} %{NOTSPACE:aws.vpc.instance-id} %{NOTSPACE:tcp_flags} %{NOTSPACE:type} %{NOTSPACE:pkt_srcaddr} %{NOTSPACE:pkt_dstaddr} %{NOTSPACE:cloud.region} %{NOTSPACE:aws.vpc.az-id} %{NOTSPACE:sublocation_type} %{NOTSPACE:sublocation_id} %{NOTSPACE:aws.vpc.pkt-src-aws-service} %{NOTSPACE:aws.vpc.pkt-dst-aws-service} %{NOTSPACE:aws.vpc.flow-direction} %{NOTSPACE:traffic_path}"
+    
+    # Handle null values (represented as "-" in VPC Flow Logs)
+    - substitute_string:
+        entries:
+          - source: "aws.vpc.srcaddr"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.dstaddr"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.srcport"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.dstport"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.protocol"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.packets"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.bytes"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.action"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.instance-id"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.pkt-src-aws-service"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.pkt-dst-aws-service"
+            from: "-"
+            to: ""
+          - source: "aws.vpc.flow-direction"
+            from: "-"
+            to: ""
+    
+    # Create timestamp from start time (epoch seconds)
+    - date:
+        destination: '@timestamp'
+        match:
+          - key: "aws.vpc.start"
+            patterns:
+              - "epoch_second"
+    
+    # Note: delete_entries is not supported in OSI
+    # Fields will be automatically filtered by OpenSearch index mapping
+  
+  sink:
+    - opensearch:
+        hosts:
+          - >-
+            https://search-public-vector-4xl-7tpwyy5762g6qmi3xukiasfmhq.us-east-1.es.amazonaws.com
+        aws:
+          serverless: false
+          region: us-east-1
+        index_type: custom
+        index: 'vpc-logs-%{yyyy.MM.dd}'
+        bulk_size: '5'

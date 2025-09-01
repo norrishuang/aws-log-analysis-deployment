@@ -1,0 +1,136 @@
+{
+  "index_patterns": ["vpc-logs-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "index.refresh_interval": "30s",
+      "index.codec": "best_compression"
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "aws": {
+          "properties": {
+            "vpc": {
+              "properties": {
+                "version": {
+                  "type": "keyword"
+                },
+                "account-id": {
+                  "type": "keyword"
+                },
+                "interface-id": {
+                  "type": "keyword"
+                },
+                "vpc-id": {
+                  "type": "keyword"
+                },
+                "subnet-id": {
+                  "type": "keyword"
+                },
+                "az-id": {
+                  "type": "keyword"
+                },
+                "instance-id": {
+                  "type": "keyword"
+                },
+                "srcaddr": {
+                  "type": "ip"
+                },
+                "dstaddr": {
+                  "type": "ip"
+                },
+                "srcport": {
+                  "type": "integer"
+                },
+                "dstport": {
+                  "type": "integer"
+                },
+                "protocol": {
+                  "type": "keyword"
+                },
+                "packets": {
+                  "type": "long"
+                },
+                "bytes": {
+                  "type": "long"
+                },
+                "start": {
+                  "type": "long"
+                },
+                "end": {
+                  "type": "long"
+                },
+                "end_timestamp": {
+                  "type": "date"
+                },
+                "duration": {
+                  "type": "integer"
+                },
+                "action": {
+                  "type": "keyword"
+                },
+                "log-status": {
+                  "type": "keyword"
+                },
+                "pkt-src-aws-service": {
+                  "type": "keyword"
+                },
+                "pkt-dst-aws-service": {
+                  "type": "keyword"
+                },
+                "flow-direction": {
+                  "type": "keyword"
+                },
+                "bytes_per_packet": {
+                  "type": "float"
+                },
+                "bytes_per_second": {
+                  "type": "float"
+                }
+              }
+            }
+          }
+        },
+        "cloud": {
+          "properties": {
+            "region": {
+              "type": "keyword"
+            }
+          }
+        },
+        "event": {
+          "properties": {
+            "dataset": {
+              "type": "keyword"
+            },
+            "module": {
+              "type": "keyword"
+            },
+            "category": {
+              "type": "keyword"
+            },
+            "type": {
+              "type": "keyword"
+            }
+          }
+        },
+        "log": {
+          "properties": {
+            "level": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    }
+  },
+  "priority": 100,
+  "version": 1,
+  "_meta": {
+    "description": "Template for AWS VPC Flow Logs indices"
+  }
+}

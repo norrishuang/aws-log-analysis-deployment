@@ -9,7 +9,9 @@
   "flowLogs": {
     "trafficType": "ALL",
     "logFormat": "custom",
-    "deliveryRoleArn": "auto-create"
+    "deliveryRoleArn": "auto-create",
+    "fileFormat": "parquet",
+    "enableHourlyPartitions": false
   },
   "s3": {
     "lifecycleRules": {

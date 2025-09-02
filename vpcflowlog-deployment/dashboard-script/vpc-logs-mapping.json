@@ -1,5 +1,7 @@
 {
-  "index_patterns": ["vpc-logs-*"],
+  "index_patterns": [
+    "vpc-logs-*"
+  ],
   "template": {
     "settings": {
       "number_of_shards": 1,

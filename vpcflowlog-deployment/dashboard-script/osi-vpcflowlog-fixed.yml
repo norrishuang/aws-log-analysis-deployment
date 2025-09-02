@@ -1,0 +1,121 @@
+version: '2'
+extension:
+  osis_configuration_metadata:
+    builder_type: visual
+vpclogs-to-opensearch:
+  source:
+    s3:
+      acknowledgments: true
+      sqs:
+        queue_url: 'https://sqs.us-east-1.amazonaws.com/812046859005/vpc-flow-logs-dev-notifications'
+        maximum_messages: '10'
+        visibility_timeout: 90s
+        visibility_duplication_protection: true
+      aws:
+        region: us-east-1
+      notification_type: sqs
+      notification_source: s3
+      codec:
+        newline:
+          skip_lines: '1'
+      compression: gzip
+      workers: '1'
+  processor:
+    # Parse VPC Flow Log fields using grok pattern
+    - grok:
+        match:
+          message: 
+            - "%{NOTSPACE:version} %{NOTSPACE:account-id} %{NOTSPACE:interface-id} %{NOTSPACE:srcaddr} %{NOTSPACE:dstaddr} %{NOTSPACE:srcport} %{NOTSPACE:dstport} %{NOTSPACE:protocol-code} %{NOTSPACE:packets} %{NOTSPACE:bytes} %{NOTSPACE:start} %{NOTSPACE:end} %{NOTSPACE:flow_action} %{NOTSPACE:log-status} %{NOTSPACE:vpc-id} %{NOTSPACE:subnet-id} %{NOTSPACE:instance-id} %{NOTSPACE:tcp-flags} %{NOTSPACE:type} %{NOTSPACE:pkt-srcaddr} %{NOTSPACE:pkt-dstaddr} %{NOTSPACE:region} %{NOTSPACE:az-id} %{NOTSPACE:sublocation-type} %{NOTSPACE:sublocation-id} %{NOTSPACE:pkt-src-aws-service} %{NOTSPACE:pkt-dst-aws-service} %{NOTSPACE:flow-direction} %{NOTSPACE:traffic-path}"
+    
+    # Handle null values (represented as "-" in VPC Flow Logs)
+    - substitute_string:
+        entries:
+          - source: "srcaddr"
+            from: "-"
+            to: ""
+          - source: "dstaddr"
+            from: "-"
+            to: ""
+          - source: "srcport"
+            from: "-"
+            to: ""
+          - source: "dstport"
+            from: "-"
+            to: ""
+          - source: "protocol-code"
+            from: "-"
+            to: ""
+          - source: "packets"
+            from: "-"
+            to: ""
+          - source: "bytes"
+            from: "-"
+            to: ""
+          - source: "flow_action"
+            from: "-"
+            to: ""
+          - source: "instance-id"
+            from: "-"
+            to: ""
+          - source: "pkt-src-aws-service"
+            from: "-"
+            to: ""
+          - source: "pkt-dst-aws-service"
+            from: "-"
+            to: ""
+          - source: "flow-direction"
+            from: "-"
+            to: ""
+          - source: "traffic-path"
+            from: "-"
+            to: ""
+    
+    # Convert numeric fields to proper types
+    - convert_entry_type:
+        key: "packets"
+        type: "long"
+    - convert_entry_type:
+        key: "bytes"
+        type: "long"
+    - convert_entry_type:
+        key: "start"
+        type: "long"
+    - convert_entry_type:
+        key: "end"
+        type: "long"
+    
+    # Create timestamp from start time (epoch seconds)
+    - date:
+        destination: "@timestamp"
+        match:
+          - key: "start"
+            patterns:
+              - "epoch_second"
+    
+    # Create end timestamp
+    - date:
+        destination: "end"
+        match:
+          - key: "end"
+            patterns:
+              - "epoch_second"
+    
+    # Create start timestamp  
+    - date:
+        destination: "start"
+        match:
+          - key: "start"
+            patterns:
+              - "epoch_second"
+  
+  sink:
+    - opensearch:
+        hosts:
+          - >-
+            https://search-public-vector-4xl-7tpwyy5762g6qmi3xukiasfmhq.us-east-1.es.amazonaws.com
+        aws:
+          serverless: false
+          region: us-east-1
+        index_type: custom
+        index: 'vpc-logs-%{yyyy.MM.dd}'
+        bulk_size: '5'

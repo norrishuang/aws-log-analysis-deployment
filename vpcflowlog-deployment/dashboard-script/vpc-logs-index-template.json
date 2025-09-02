@@ -1,0 +1,147 @@
+{
+    "index_patterns": [
+      "vpc-logs-*"
+    ],
+    "template": {
+      "settings": {
+        "index.codec": "zstd",
+        "index.refresh_interval": "10s",
+        "index.number_of_shards": "3",
+        "index.translog.flush_threshold_size": "3072mb",
+        "index.translog.sync_interval": "30s",
+        "index.translog.durability": "async",
+        "index.number_of_replicas": "0",
+        "index.plugins.index_state_management.rollover_alias": "vpc-logs"
+      },
+      "mappings": {
+        "properties": {
+          "srcaddr": {
+            "fields": {
+              "keyword": {
+                "ignore_above": 256,
+                "type": "keyword"
+              }
+            },
+            "type": "text"
+          },
+          "dstport": {
+            "type": "keyword"
+          },
+          "traffic-path": {
+            "type": "keyword"
+          },
+          "subnet-id": {
+            "type": "keyword"
+          },
+          "dstaddr": {
+            "fields": {
+              "keyword": {
+                "ignore_above": 256,
+                "type": "keyword"
+              }
+            },
+            "type": "text"
+          },
+          "pkt-srcaddr": {
+            "fields": {
+              "keyword": {
+                "ignore_above": 256,
+                "type": "keyword"
+              }
+            },
+            "type": "text"
+          },
+          "type": {
+            "type": "keyword"
+          },
+          "vpc-id": {
+            "type": "keyword"
+          },
+          "sublocation-type": {
+            "type": "keyword"
+          },
+          "packets": {
+            "type": "long"
+          },
+          "protocol": {
+            "type": "keyword"
+          },
+          "pkt-dstaddr": {
+            "fields": {
+              "keyword": {
+                "ignore_above": 256,
+                "type": "keyword"
+              }
+            },
+            "type": "text"
+          },
+          "end": {
+            "type": "date"
+          },
+          "pkt-dst-aws-service": {
+            "type": "keyword"
+          },
+          "log-status": {
+            "type": "keyword"
+          },
+          "sublocation-id": {
+            "type": "keyword"
+          },
+          "az-id": {
+            "type": "keyword"
+          },
+          "flow-direction": {
+            "type": "keyword"
+          },
+          "protocol-code": {
+            "type": "keyword"
+          },
+          "account-id": {
+            "type": "keyword"
+          },
+          "instance-id": {
+            "type": "keyword"
+          },
+          "start": {
+            "type": "date"
+          },
+          "version": {
+            "type": "keyword"
+          },
+          "tcp-flags": {
+            "type": "keyword"
+          },
+          "@timestamp": {
+            "type": "date"
+          },
+          "pkt-src-aws-service": {
+            "type": "keyword"
+          },
+          "flow_action": {
+            "type": "keyword"
+          },
+          "bytes": {
+            "type": "long"
+          },
+          "srcport": {
+            "type": "keyword"
+          },
+          "region": {
+            "type": "keyword"
+          },
+          "interface-id": {
+            "type": "keyword"
+          }
+        }
+      },
+      "aliases": {
+        "vpc-logs": {}
+      }
+    },
+    "composed_of": [],
+    "priority": "10",
+    "_meta": {
+      "flow": "simple"
+    },
+    "name": "vpc_logs_template"
+  }

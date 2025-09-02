@@ -1,0 +1,58 @@
+{
+  "loadBalancerArn": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/my-load-balancer/1234567890abcdef",
+  "bucketName": "my-elb-access-logs-bucket",
+  "environment": "prod",
+  "aws": {
+    "account": "123456789012",
+    "region": "us-east-1"
+  },
+  "accessLogs": {
+    "enabled": true,
+    "prefix": "elb-access-logs",
+    "deliveryInterval": 5
+  },
+  "s3": {
+    "lifecycleRules": {
+      "transitionToIA": 30,
+      "transitionToGlacier": 90,
+      "transitionToDeepArchive": 365,
+      "deleteOldVersions": 30
+    },
+    "encryption": "S3_MANAGED",
+    "versioning": true
+  },
+  "sqs": {
+    "enableNotification": true,
+    "queueName": "elb-logs-notifications",
+    "visibilityTimeoutSeconds": 300,
+    "messageRetentionPeriod": 1209600,
+    "deadLetterQueue": {
+      "enabled": true,
+      "maxReceiveCount": 3,
+      "retentionPeriod": 1209600
+    },
+    "eventFilters": {
+      "prefix": "elb-access-logs/",
+      "suffix": ".gz"
+    }
+  },
+  "cloudWatch": {
+    "logGroupName": "/aws/elb/accesslogs",
+    "retentionDays": 30
+  },
+  "processing": {
+    "opensearch": {
+      "indexPattern": "elb-logs-%{yyyy.MM.dd}",
+      "pipelineConfig": "dashborad-script/osi-elb-logs.yml"
+    },
+    "glue": {
+      "database": "elb_access_logs",
+      "table": "access_logs",
+      "autoCreatePartitions": true
+    },
+    "athena": {
+      "workgroup": "primary",
+      "outputLocation": "s3://my-athena-results-bucket/elb-logs/"
+    }
+  }
+}

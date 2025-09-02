@@ -1,0 +1,163 @@
+version: '2'
+extension:
+  osis_configuration_metadata:
+    builder_type: visual
+elblogs-to-opensearch:
+  source:
+    s3:
+      acknowledgments: true
+      sqs:
+        queue_url: 'https://sqs.us-east-1.amazonaws.com/812046859005/elb-logs-prod-notifications'
+        maximum_messages: '10'
+        visibility_timeout: 90s
+        visibility_duplication_protection: true
+      aws:
+        region: us-east-1
+      notification_type: sqs
+      notification_source: s3
+      codec:
+        newline: {}
+      compression: gzip
+      workers: '1'
+  processor:
+    # Parse ELB Access Log fields using grok pattern based on actual log format
+    - grok:
+        match:
+          message: 
+            - "%{NOTSPACE:type} %{TIMESTAMP_ISO8601:elb_timestamp} %{NOTSPACE:elb} %{NOTSPACE:client_port} %{NOTSPACE:target_port} %{NUMBER:request_processing_time:float} %{NUMBER:target_processing_time:float} %{NUMBER:response_processing_time:float} %{NUMBER:elb_status_code:int} %{NOTSPACE:target_status_code} %{NUMBER:received_bytes:long} %{NUMBER:sent_bytes:long} %{QS:request} %{QS:user_agent} %{NOTSPACE:ssl_cipher} %{NOTSPACE:ssl_protocol} %{NOTSPACE:target_group_arn} %{QS:trace_id} %{QS:domain_name} %{QS:chosen_cert_arn} %{NUMBER:matched_rule_priority:int} %{TIMESTAMP_ISO8601:request_creation_time} %{QS:actions_executed} %{QS:redirect_url} %{QS:error_reason} %{QS:target_port_list} %{QS:target_status_code_list} %{QS:classification} %{QS:classification_reason} %{NOTSPACE:conn_trace_id}"
+    
+    # Handle null values (represented as "-" in ELB logs)
+    - substitute_string:
+        entries:
+          - source: "target_port"
+            from: "-"
+            to: ""
+          - source: "target_status_code"
+            from: "-"
+            to: ""
+          - source: "ssl_cipher"
+            from: "-"
+            to: ""
+          - source: "ssl_protocol"
+            from: "-"
+            to: ""
+    
+    # Parse client IP and port
+    - grok:
+        match:
+          client_port:
+            - "%{IP:client_ip}:%{NUMBER:client_port_parsed:int}"
+        break_on_match: false
+    
+    # Parse target IP and port (if not empty)
+    - grok:
+        match:
+          target_port:
+            - "%{IP:target_ip}:%{NUMBER:target_port_parsed:int}"
+        break_on_match: false
+    
+    # Set timestamp field (not @timestamp since it's an alias)
+    - date:
+        destination: "timestamp"
+        match:
+          key: "elb_timestamp"
+          patterns:
+            - "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"
+    
+    # Set request creation time
+    - date:
+        destination: "request_creation_time"
+        match:
+          key: "request_creation_time"
+          patterns:
+            - "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"
+    
+    # Parse HTTP request details
+    - grok:
+        match:
+          request:
+            - '"%{WORD:request_verb} %{URIPROTO:request_proto}://%{URIHOST:request_host}(?::%{URIPORT:request_port})?%{URIPATH:request_url}(?:%{URIPARAM:request_params})? %{NOTSPACE:http_version}"'
+        break_on_match: false
+    
+    # Clean up quoted fields
+    - substitute_string:
+        entries:
+          - source: "user_agent"
+            from: '"'
+            to: ""
+          - source: "trace_id"
+            from: '"'
+            to: ""
+          - source: "domain_name"
+            from: '"'
+            to: ""
+          - source: "chosen_cert_arn"
+            from: '"'
+            to: ""
+          - source: "actions_executed"
+            from: '"'
+            to: ""
+          - source: "redirect_url"
+            from: '"'
+            to: ""
+          - source: "error_reason"
+            from: '"'
+            to: ""
+          - source: "target_port_list"
+            from: '"'
+            to: ""
+          - source: "target_status_code_list"
+            from: '"'
+            to: ""
+          - source: "classification"
+            from: '"'
+            to: ""
+          - source: "classification_reason"
+            from: '"'
+            to: ""
+    
+    # Handle empty quoted fields
+    - substitute_string:
+        entries:
+          - source: "trace_id"
+            from: '"-"'
+            to: ""
+          - source: "domain_name"
+            from: '"-"'
+            to: ""
+          - source: "chosen_cert_arn"
+            from: '"-"'
+            to: ""
+          - source: "actions_executed"
+            from: '"-"'
+            to: ""
+          - source: "redirect_url"
+            from: '"-"'
+            to: ""
+          - source: "error_reason"
+            from: '"-"'
+            to: ""
+          - source: "target_port_list"
+            from: '"-"'
+            to: ""
+          - source: "target_status_code_list"
+            from: '"-"'
+            to: ""
+          - source: "classification"
+            from: '"-"'
+            to: ""
+          - source: "classification_reason"
+            from: '"-"'
+            to: ""
+  
+  sink:
+    - opensearch:
+        hosts:
+          - >-
+            https://search-public-vector-4xl-7tpwyy5762g6qmi3xukiasfmhq.us-east-1.es.amazonaws.com
+        aws:
+          serverless: false
+          region: us-east-1
+        index_type: custom
+        index: 'elb-logs-%{yyyy.MM.dd}'
+        bulk_size: '5'
